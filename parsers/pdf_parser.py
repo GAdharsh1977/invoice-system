@@ -1,13 +1,21 @@
 from pypdf import PdfReader
+from parsers.parser import BaseParser
 
-def parse_pdf(file_path):
-    reader = PdfReader(file_path)
-    text = ""
-    for page in reader.pages:
-        page_text = page.extract_text()
-        if page_text:   
-            text += page_text + "\n"
-    return {
-        "raw_text": text,
-        "source_type": "pdf"
-    }
+class PDFParser(BaseParser):
+    format_name = "PDF"
+
+    def parse(self, file_path):
+        reader = PdfReader(file_path)
+
+        text = "\n".join(
+            page.extract_text() or ""
+            for page in reader.pages
+        )
+
+        return {
+            "format_hint": "PDF",
+            "raw": text,
+            "normalized": {
+                "text": text
+            }
+        }

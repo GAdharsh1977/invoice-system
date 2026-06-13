@@ -1,17 +1,18 @@
 import xml.etree.ElementTree as ET
 from parsers.parser import BaseParser
 
-class XMLParser(BaseParser):
-    format_name = "XML"
+class UBLParser(BaseParser):
+    format_name = "UBL"
 
     def parse(self, file_path):
         tree = ET.parse(file_path)
         root = tree.getroot()
 
         return {
-            "format_hint": "XML",
+            "format_hint": "UBL",
             "raw": root,
             "normalized": {
-                "root_tag": root.tag
+                "invoice_no": root.findtext(".//InvoiceID"),
+                "invoice_date": root.findtext(".//IssueDate"),
             }
         }

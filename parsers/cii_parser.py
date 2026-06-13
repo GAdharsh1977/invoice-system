@@ -1,17 +1,18 @@
 import xml.etree.ElementTree as ET
 from parsers.parser import BaseParser
 
-class XMLParser(BaseParser):
-    format_name = "XML"
+class CIIParser(BaseParser):
+    format_name = "CII"
 
     def parse(self, file_path):
         tree = ET.parse(file_path)
         root = tree.getroot()
 
         return {
-            "format_hint": "XML",
+            "format_hint": "CII",
             "raw": root,
             "normalized": {
-                "root_tag": root.tag
+                "invoice_no": root.findtext(".//ExchangedDocument//ID"),
+                "currency": root.findtext(".//InvoiceCurrencyCode"),
             }
         }

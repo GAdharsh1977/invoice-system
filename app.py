@@ -1,9 +1,10 @@
+import os
+import tempfile
 import streamlit as st
 
-from parsers.pdf_parser import parse_pdf
-from core.mapper import map_pdf_to_invoice
-from core.validator import validate
-from db.db import save_invoice
+from core.pipeline import process_document
+from main import dispatcher as parser_dispatcher, mapper_dispatcher
+from core.validator import InvoiceValidator
 
 st.title("Invoice Automation MVP")
 
@@ -12,28 +13,45 @@ uploaded = st.file_uploader(
     type=["pdf", "xml", "jpg", "jpeg", "png"]
 )
 
+validator = InvoiceValidator()
+
+result = None 
+
 if uploaded:
 
-    file_path = uploaded.name
+    with tempfile.NamedTemporaryFile(
+        delete=False,
+        suffix=os.path.splitext(uploaded.name)[1]
+    ) as tmp:
 
-    with open(file_path, "wb") as f:
-        f.write(uploaded.getbuffer())
+        tmp.write(uploaded.getbuffer())
+        file_path = tmp.name
 
-    pdf_data = parse_pdf(file_path)
+    try:
+        result = process_document(
+            file_path=file_path,
+            parser_dispatcher=parser_dispatcher,
+            mapper_dispatcher=mapper_dispatcher,
+            validator=validator
+        )
 
-    invoice = map_pdf_to_invoice(pdf_data)
+        st.subheader("Processing Result")
+        st.json(result)
 
-    validation = validate(invoice)
+    except Exception as e:
+        st.error(str(e))
 
-    save_invoice(
-        invoice,
-        validation["status"]
-    )
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
-    st.subheader("Extracted Invoice")
+if result is not None:
 
-    st.json(invoice)
+    st.subheader("Invoice")
+    st.json(result.get("invoice", {}))
 
     st.subheader("Validation")
-
-    st.json(validation)
+    st.json({
+        "status": result.get("status"),
+        "flags": result.get("flags", [])
+    })
